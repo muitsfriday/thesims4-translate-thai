@@ -1,0 +1,24 @@
+{
+  "name": "thesims4_translation_project",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "isomorphic-unfetch": "^3.0.0",
+    "json": "^9.0.6",
+    "next": "^9.0.3",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-virtualized": "^9.21.1",
+    "to": "^0.2.9",
+    "xml": "^1.0.1",
+    "xml2js": "^0.4.19"
+  },
+  "scripts": {
+    "forward": "node to-json",
+    "compact": "node to-xml",
+    "dev": "next",
+    "build": "next build",
+    "start": "next start"
+  }
+}
