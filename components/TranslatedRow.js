@@ -11,7 +11,7 @@ const Row = styled.div`
 `
 
 const Index = styled.div`
-  flex: 0 0 100px;
+  flex: 0 0 160px;
 `
 
 const Original = styled.div`
@@ -34,7 +34,24 @@ const TranslatedContainer = styled.div`
 const EditBtn = styled.button`
   padding: 5px 10px;
   font-size: 13px;
-  border: 1px solid #ccc;
+  border: 1px solid #39607b;
+  background: transparent;
+  margin-top: 15px;
+`
+
+const TranslationInput = styled.input`
+  padding: 10px;
+  border: 1px solid #e2e2e2;
+  margin-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 14px;
+  border-radius: 5px;
+`
+
+const TranslatedText = styled.span`
+  display: inline-block;
+  margin-right: 30px;
 `
 
 const TranslatedRow = ({
@@ -58,7 +75,7 @@ const TranslatedRow = ({
 
   return (
     <Row>
-      <Index>{index}</Index>
+      <Index>{index} <br /><EditBtn onClick={handleEditClick} >แก้ไข</EditBtn></Index>
       <Original>
         <OriginalText>
           {original}
@@ -66,8 +83,8 @@ const TranslatedRow = ({
         <TranslatedContainer>
           {
             editMode 
-              ? <input type="text" value={translation} onChange={handleTranslationChange} />
-              : <>{translated} <EditBtn onClick={handleEditClick} >แก้ไข</EditBtn></>
+              ? <TranslationInput type="text" value={translation} onChange={handleTranslationChange} />
+              : <><TranslatedText>{translated}</TranslatedText></>
           }
         </TranslatedContainer>
       </Original>

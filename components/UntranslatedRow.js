@@ -11,7 +11,7 @@ const Row = styled.div`
 `
 
 const Index = styled.div`
-  flex: 0 0 100px;
+  flex: 0 0 160px;
 `
 
 const Original = styled.div`
@@ -27,31 +27,53 @@ const OriginalText = styled.span`
   padding-left: 10px;
 `
 
+const PlaceBtn = styled.button`
+  padding: 5px 10px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  background: transparent;
+`
+
 const TranslationInput = styled.textarea`
   padding: 10px;
-  border: 1px solid #ccc;
+  border: 1px solid #e2e2e2;
   margin-top: 12px;
   width: 100%;
   box-sizing: border-box;
-  height: 40px;
+  height: 70px;
   font-size: 14px;
   border-radius: 5px;
 `
 
-const UntranslatedRow = ({ index, original, onChange = () => {} }) => {
-  const [translation, setTranslation] = useState('')
+const SkipBtn = styled.button`
+  padding: 5px 10px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  background: transparent;
+  margin-top: 15px;
+`
+
+const UntranslatedRow = ({ index, original, translation, onChange = () => {} }) => {
   const handleChange = e => {
     const val = e.target.value
     onChange(val)
-    setTranslation(val)
+  }
+  const handleClickPlace = () => {
+    onChange(original)
+  }
+  const handleClickSkip = () => {
+
   }
 
   return (
     <Row className={translation ? 'edited' : ''}>
-      <Index>{index}</Index>
+      <Index>
+        {index}
+        <br /> <SkipBtn onClick={handleClickSkip}>--&gt;</SkipBtn>
+      </Index>
       <Original>
         <OriginalText>
-          {original}
+          {original} <PlaceBtn onClick={handleClickPlace}>+</PlaceBtn>
         </OriginalText>
         <div>
           <TranslationInput rows="2" type="text" value={translation} onChange={handleChange} />
