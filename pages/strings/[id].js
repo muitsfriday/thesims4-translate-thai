@@ -1,24 +1,44 @@
-import React, { Fragment, useState, useEffect } from 'react'
+import React, { Fragment, useState, memo } from 'react'
 import { useRouter } from 'next/router'
 import fetch from 'isomorphic-unfetch'
 import UntranslatedRow from '../../components/UntranslatedRow'
 import TranslatedRow from '../../components/TranslatedRow'
+import { FixedSizeList as List } from 'react-window'
+import memoize from 'memoize-one'
 
-const RecordComponent = ({ record, onChange }) => {
-  const { $: attr, _: value } = record
-  const isTranslated = typeof attr.Original === 'string'
-  
-  return isTranslated 
-    ? <TranslatedRow index={ attr.Key } original={ attr.Original } translated={ value } /> 
-    : <UntranslatedRow index={ attr.Key } original={ value } onChange={ onChange } />
-}
+const Row = memo(({ data, index, style }) => {
+  const { db, changes } = data
+  const { $: attr, _: value } = db[index]
+  const { Key: key, Original: original, Translated: translated = '' } = attr
+  const isTranslated = typeof original === 'string'
+  const record = db[index]
 
+  return (
+    <div style={style}>
+      {isTranslated ? (
+        <TranslatedRow
+          style={style}
+          index={key}
+          original={original}
+          translated={value}
+          onChange={text => changes.set(index, text)}
+        />
+      ) : (
+        <UntranslatedRow
+          style={style}
+          index={key}
+          original={value}
+          translated={translated}
+          onChange={text => changes.set(index, text)}
+        />
+      )}
+    </div>
+  )
+})
+
+const pack = memoize((db, changes) => ({ db, changes }))
 
 const Translate = ({ data, initPage = 1 }) => {
-  const total = data.length
-  const limit = 20
-  const totalPage = Math.ceil(total/limit)
-  
   const router = useRouter()
   const { id } = router.query
 
@@ -36,7 +56,11 @@ const Translate = ({ data, initPage = 1 }) => {
   const save = () => {
     changes.forEach((text, index) => {
       const record = db[index]
-      db[index] = { $: { Key: record.$.Key, Original: record._ }, _: text }
+      if (record.$.Original) {
+        db[index] = { $: { Key: record.$.Key, Original: record.$.Original }, _: text }
+      } else {
+        db[index] = { $: { Key: record.$.Key, Original: record._ }, _: text }
+      }
     })
     setDb([...db])
 
@@ -47,34 +71,38 @@ const Translate = ({ data, initPage = 1 }) => {
       },
       body: JSON.stringify({ list: db })
     })
-  }  
+
+    changes.clear()
+  }
+
+  const total = db.length
+  const translatedCount = db.filter(r => r.$.Original).length
+  const percentage = translatedCount / total * 100
+  const items = pack(db, changes)
 
   return (
     <>
-     <button onClick={ save } >Save</button>
-      <table>
-        <thead>
-          <tr>
-            <th>Key</th>
-            <th>Original</th>
-            <th>Translated</th>
-            <th>Manage</th>
-          </tr>
-        </thead>
-        <tbody>
-        { db.map((record, i) => <RecordComponent record={record} key={record.$.Key} onChange={text => onTextUpdate(text, i)} />) }
-        </tbody>
-      </table>
+      <div>Status translated: ({translatedCount}/{total}) {percentage}%</div>
+      <button onClick={save}>Save</button>
+      <List
+        height={700}
+        itemCount={db.length}
+        itemData={items}
+        itemSize={120}
+        width={1200}
+      >
+        {Row}
+      </List>
     </>
   )
 }
 
-
-Translate.getInitialProps = async (ctx) => {
-  const data = await fetch(`http://localhost:3000/api/load?file=${ctx.query.id}`)
+Translate.getInitialProps = async ctx => {
+  const data = await fetch(
+    `http://localhost:3000/api/load?file=${ctx.query.id}`
+  )
   const json = await data.json()
   return { data: json.list }
 }
-
 
 export default Translate

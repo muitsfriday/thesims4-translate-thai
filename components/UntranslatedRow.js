@@ -1,20 +1,63 @@
 import React, { useState } from 'react'
+import styled from 'styled-components'
+
+const Row = styled.div`
+  font-family: -apple-system,system-ui,BlinkMacSystemFont,"Segoe UI",Roboto,"Tahoma";
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  height: 80px;
+  padding: 10px;
+`
+
+const Index = styled.div`
+  flex: 0 0 100px;
+`
+
+const Original = styled.div`
+  flex: 1 0 300px;
+`
+
+const Transltated = styled.div`
+  flex: 1 0 300px;
+`
+
+const OriginalText = styled.span`
+  display: inline-block;
+  padding-left: 10px;
+`
+
+const TranslationInput = styled.textarea`
+  padding: 10px;
+  border: 1px solid #ccc;
+  margin-top: 12px;
+  width: 100%;
+  box-sizing: border-box;
+  height: 40px;
+  font-size: 14px;
+  border-radius: 5px;
+`
 
 const UntranslatedRow = ({ index, original, onChange = () => {} }) => {
-
   const [translation, setTranslation] = useState('')
-  const handleChange = (e) => {
-    onChange(e.target.value)
-    setTranslation(e.target.value)
+  const handleChange = e => {
+    const val = e.target.value
+    onChange(val)
+    setTranslation(val)
   }
 
   return (
-    <tr className={ translation ? 'edited' : '' }>
-      <td>{ index }</td>
-      <td>{ original }</td>
-      <td><input type="text" value={ translation } onChange={handleChange} /></td>
-      <td>-</td>
-    </tr>
+    <Row className={translation ? 'edited' : ''}>
+      <Index>{index}</Index>
+      <Original>
+        <OriginalText>
+          {original}
+        </OriginalText>
+        <div>
+          <TranslationInput rows="2" type="text" value={translation} onChange={handleChange} />
+        </div>
+      </Original>
+    </Row>
   )
 }
 

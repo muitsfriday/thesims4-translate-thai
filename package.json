@@ -10,6 +10,8 @@
     "react": "^16.8.6",
     "react-dom": "^16.8.6",
     "react-virtualized": "^9.21.1",
+    "react-window": "^1.8.5",
+    "styled-components": "^4.3.2",
     "to": "^0.2.9",
     "xml": "^1.0.1",
     "xml2js": "^0.4.19"
@@ -20,5 +22,8 @@
     "dev": "next",
     "build": "next build",
     "start": "next start"
+  },
+  "devDependencies": {
+    "babel-plugin-styled-components": "^1.10.6"
   }
 }
