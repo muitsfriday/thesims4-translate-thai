@@ -34,6 +34,16 @@ const SaveBtn = styled.button`
   top: 5px;
 `
 
+const ApplyBtn = styled.button`
+  padding: 5px 30px;
+  font-size: 13px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  background-color: transparent;
+  top: 5px;
+  margin-left: 5px;
+`
+
 const Checkbox = styled.input`
   margin: 0px;
   width: 15px;
@@ -96,6 +106,9 @@ const Row = memo(({ data, index, style }) => {
 }, areEqual)
 
 const postback = (id, db) => {
+  const data = db.map(r => {
+    return r
+  })
   fetch(`http://localhost:3000/api/save?file=${id}`, {
     method: 'POST',
     headers: {
@@ -120,9 +133,14 @@ const applyFilter = (filter, data) => {
 // Component
 const Translate = ({ data }) => {
   const router = useRouter()
-  //const { id } = router.query
+  const { id } = router.query
 
   const [database, setDatabase] = useState(data)
+  const [replacer, setReplacer] = useState({
+    find: '',
+    replace: '',
+    matched: 0
+  })
   const [changes, setChanges] = useState({})
   const [viewPortHeight, setViewPortHeight] = useState(
     hasWindow ? window.innerHeight - 80 : 800
@@ -140,16 +158,17 @@ const Translate = ({ data }) => {
   }
 
   const save = () => {
+    console.log(changes)
     new Map(Object.entries(changes)).forEach(({ text, index }, recordIndex) => {
       const record = database[recordIndex]
       if (record.$.Original) {
         database[recordIndex] = {
-          $: { Key: record.$.Key, Original: record.$.Original },
+          $: { Key: record.$.Key, Original: record.$.Original, _index: recordIndex },
           _: text
         }
       } else {
         database[recordIndex] = {
-          $: { Key: record.$.Key, Original: record._ },
+          $: { Key: record.$.Key, Original: record._, _index: recordIndex },
           _: text
         }
       }
@@ -161,8 +180,36 @@ const Translate = ({ data }) => {
     postback(id, database)
   }
 
-  const total = data.length
-  const translatedCount = data.filter(r => r.$.Original).length
+  const matchAll = () => {
+    const match = database.filter(r => !r.$.Original && r._ === replacer.find)
+    setReplacer({
+      ...replacer,
+      matched: match.length
+    })
+  }
+
+  const translateAll = () => {
+    const match = database.filter(r => !r.$.Original && r._ === replacer.find)
+    match.forEach(r => {
+      changes[r.$._index] = { text: replacer.replace }
+    })
+    const display = applyFilter(filter, database)
+    display.forEach((v, i) => {
+      if (v._ === replacer.find) {
+        changes[v.$._index] = { text: replacer.replace, index: i }
+      }
+    })
+    setDisplayData(display)
+    setChanges({ ...changes })
+    setReplacer({
+      find: '',
+      replace: '',
+      matched: 0
+    })
+  }
+
+  const total = database.length
+  const translatedCount = database.filter(r => r.$.Original).length
   const percentage = (translatedCount / total) * 100
 
   const handleFilterChange = e => {
@@ -184,6 +231,24 @@ const Translate = ({ data }) => {
     setDisplayData(applyFilter(nextFilter, database))
   }
 
+  const handleFindTextChange = e => {
+    const val = e.target.value
+    const nextReplacer = {
+      ...replacer,
+      find: val
+    }
+    setReplacer(nextReplacer)
+  }
+
+  const handleReplaceTextChange = e => {
+    const val = e.target.value
+    const nextReplacer = {
+      ...replacer,
+      replace: val
+    }
+    setReplacer(nextReplacer)
+  }
+
   const items = pack(displayData, changes, setChanges)
 
   return (
@@ -191,6 +256,16 @@ const Translate = ({ data }) => {
       <StatusBar>
         <div>
           Status translated: ({translatedCount}/{total}) {percentage}%
+          <TextSearch type="text" placeholder="translate all" onChange={handleFindTextChange} value={replacer.find} />
+          <ApplyBtn onClick={matchAll}>Match All</ApplyBtn>
+          {
+            replacer.matched ? (
+              <>
+              <TextSearch type="text" placeholder="with" onChange={handleReplaceTextChange} value={replacer.replace} />
+              <ApplyBtn onClick={translateAll}>Translated All ({replacer.matched})</ApplyBtn>
+              </>
+            ) : null
+          }
         </div>
         <FilterWrapper>
           <Checkbox
