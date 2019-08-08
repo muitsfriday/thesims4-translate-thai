@@ -32,9 +32,12 @@ const TranslatedContainer = styled.div`
 `
 
 const EditBtn = styled.button`
+  display: inline-block;
   padding: 5px 10px;
   font-size: 13px;
   border: 1px solid #ccc;
+  background-color: transparent;
+  margin-left: 30px;
 `
 
 const TranslatedRow = ({
@@ -67,7 +70,7 @@ const TranslatedRow = ({
           {
             editMode 
               ? <input type="text" value={translation} onChange={handleTranslationChange} />
-              : <>{translated} <EditBtn onClick={handleEditClick} >แก้ไข</EditBtn></>
+              : <><TranslatedText>{translated}</TranslatedText><EditBtn onClick={handleEditClick} >แก้ไข</EditBtn></>
           }
         </TranslatedContainer>
       </Original>
