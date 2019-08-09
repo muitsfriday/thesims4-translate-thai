@@ -6,8 +6,8 @@ const Row = styled.div`
   display: flex;
   flex-direction: row;
   justify-content: flex-start;
-  height: 80px;
   padding: 10px;
+  font-size: 12px;
 `
 
 const Index = styled.div`

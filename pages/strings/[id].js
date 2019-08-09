@@ -1,9 +1,9 @@
 import React, { Fragment, useState, memo } from 'react'
 import { useRouter } from 'next/router'
 import fetch from 'isomorphic-unfetch'
-import UntranslatedRow from '../../components/UntranslatedRow'
-import TranslatedRow from '../../components/TranslatedRow'
-import { FixedSizeList as List, areEqual } from 'react-window'
+import Row from '../../components/Row'
+import HistoricalSearch from '../../components/HistoricalSearch'
+import { FixedSizeList as List } from 'react-window'
 import memoize from 'memoize-one'
 import styled from 'styled-components'
 
@@ -17,15 +17,16 @@ const Wrapper = styled.div`
 const StatusBar = styled.div`
   font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto,
     'Tahoma';
-  padding: 10px;
+  padding: 5px 10px;
   border-bottom: 1px solid #e0e0e0;
   position: relative;
   height: 80px;
+  font-size: 12px;
 `
 
 const SaveBtn = styled.button`
-  padding: 5px 30px;
-  font-size: 13px;
+  padding: 5px 20px;
+  font-size: 12px;
   border: 1px solid #ccc;
   border-radius: 5px;
   background-color: transparent;
@@ -36,7 +37,7 @@ const SaveBtn = styled.button`
 
 const ApplyBtn = styled.button`
   padding: 5px 30px;
-  font-size: 13px;
+  font-size: 12px;
   border: 1px solid #ccc;
   border-radius: 5px;
   background-color: transparent;
@@ -52,11 +53,11 @@ const Checkbox = styled.input`
 `
 
 const FilterWrapper = styled.div`
-  padding: 10px 0px;
+  padding: 5px 0px;
 `
 
 const TextSearch = styled.input`
-  padding: 5px 10px;
+  padding: 3px 10px;
   border: 1px solid #e2e2e2;
   margin-top: 2px;
   box-sizing: border-box;
@@ -65,45 +66,31 @@ const TextSearch = styled.input`
   margin-left: 10px;
 `
 
-const Row = memo(({ data, index, style }) => {
-  const { db, changes, setChanges } = data
-  const { $: attr, _: value } = db[index]
-  const { Key: key, Original: original, _index: recordIndex } = attr
-  const isTranslated = typeof original === 'string'
+const ContentWrapper = styled.div`
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+`
 
-  const callback = text => {
-    changes[recordIndex] = { text, index }
-    setChanges({ ...changes })
-  }
+const CustomList = styled(List)`
+  flex: 0 0 900px;
+  box-sizing: border-box;
+  padding-right: 10px;
+  border-right: 1px solid #e0e0e0;
+`
 
-  const change = changes[recordIndex] || { text: '', index }
+const SideContainer = styled.div`
+  flex: 0 0 300px;
+`
 
-  return (
-    <div
-      style={{
-        ...style,
-        backgroundColor: isTranslated ? '#99cef5' : 'transparent',
-        overflow: 'hidden'
-      }}
-    >
-      {isTranslated ? (
-        <TranslatedRow
-          index={`${key}-${recordIndex}`}
-          original={original}
-          translated={value}
-          onChange={callback}
-        />
-      ) : (
-        <UntranslatedRow
-          index={`${key}-${recordIndex}`}
-          original={value}
-          translation={change.text}
-          onChange={callback}
-        />
-      )}
-    </div>
-  )
-}, areEqual)
+const StatusText = styled.span`
+  font-size: 10px;
+  color: #93760d;
+  display: inline-block;
+  margin-left: 20px;
+`
+
+// -------- end css ------------ //
 
 const postback = (id, db) => {
   const data = db.map(r => {
@@ -118,15 +105,17 @@ const postback = (id, db) => {
   })
 }
 
-const pack = memoize((db, changes, setChanges) => {
-  return { db, changes, setChanges }
+const pack = memoize((db, changes, setChanges, handleSpread) => {
+  return { db, changes, setChanges, onSpread: handleSpread }
 })
 
 const applyFilter = (filter, data) => {
   return data.filter(r => {
     const o = (r.$.Original || r._).toLowerCase()
-    return (filter.onlyUntranslate ? !r.$.Original : true) 
-    && (filter.text.length ? o.includes(filter.text) : true) 
+    return (
+      (filter.onlyUntranslate ? !r.$.Original : true) &&
+      (filter.text.length ? o.includes(filter.text) : true)
+    )
   })
 }
 
@@ -135,12 +124,8 @@ const Translate = ({ data }) => {
   const router = useRouter()
   const { id } = router.query
 
+  const [statusText, setStatusText] = useState('console')
   const [database, setDatabase] = useState(data)
-  const [replacer, setReplacer] = useState({
-    find: '',
-    replace: '',
-    matched: 0
-  })
   const [changes, setChanges] = useState({})
   const [viewPortHeight, setViewPortHeight] = useState(
     hasWindow ? window.innerHeight - 80 : 800
@@ -158,12 +143,15 @@ const Translate = ({ data }) => {
   }
 
   const save = () => {
-    console.log(changes)
     new Map(Object.entries(changes)).forEach(({ text, index }, recordIndex) => {
       const record = database[recordIndex]
       if (record.$.Original) {
         database[recordIndex] = {
-          $: { Key: record.$.Key, Original: record.$.Original, _index: recordIndex },
+          $: {
+            Key: record.$.Key,
+            Original: record.$.Original,
+            _index: recordIndex
+          },
           _: text
         }
       } else {
@@ -172,50 +160,24 @@ const Translate = ({ data }) => {
           _: text
         }
       }
-      displayData[index] = { ...database[recordIndex],  }
+      displayData[index] = { ...database[recordIndex] }
     })
+    setStatusText(`saved ${Object.keys(changes).length} records.`)
     setChanges({})
     setDatabase([...database])
     setDisplayData([...displayData])
     postback(id, database)
   }
 
-  const matchAll = () => {
-    const match = database.filter(r => !r.$.Original && r._ === replacer.find)
-    setReplacer({
-      ...replacer,
-      matched: match.length
-    })
-  }
-
-  const translateAll = () => {
-    const match = database.filter(r => !r.$.Original && r._ === replacer.find)
-    match.forEach(r => {
-      changes[r.$._index] = { text: replacer.replace }
-    })
-    const display = applyFilter(filter, database)
-    display.forEach((v, i) => {
-      if (v._ === replacer.find) {
-        changes[v.$._index] = { text: replacer.replace, index: i }
-      }
-    })
-    setDisplayData(display)
-    setChanges({ ...changes })
-    setReplacer({
-      find: '',
-      replace: '',
-      matched: 0
-    })
-  }
-
   const total = database.length
   const translatedCount = database.filter(r => r.$.Original).length
-  const percentage = (translatedCount / total) * 100
+  const percentage = ((translatedCount / total) * 100).toFixed(4)
+  const translatedWords = database.filter(r => r.$.Original)
 
   const handleFilterChange = e => {
     const nextFilter = {
       ...filter,
-      onlyUntranslate: e.target.checked,
+      onlyUntranslate: e.target.checked
     }
     setFilter(nextFilter)
     setDisplayData(applyFilter(nextFilter, database))
@@ -231,41 +193,28 @@ const Translate = ({ data }) => {
     setDisplayData(applyFilter(nextFilter, database))
   }
 
-  const handleFindTextChange = e => {
-    const val = e.target.value
-    const nextReplacer = {
-      ...replacer,
-      find: val
-    }
-    setReplacer(nextReplacer)
+  const handleSpread = (original, translated) => {
+    const matched = database.filter(r => (r.$.Original || r._) === original)
+    setStatusText(`speard operation matched ${matched.length} records`)
+    matched.forEach(r => {
+      changes[r.$._index] = { text: translated }
+    })
+    displayData.forEach((v, i) => {
+      if (v._ === original) {
+        changes[v.$._index] = { text: translated, index: i }
+      }
+    })
+    setChanges({ ...changes })
   }
 
-  const handleReplaceTextChange = e => {
-    const val = e.target.value
-    const nextReplacer = {
-      ...replacer,
-      replace: val
-    }
-    setReplacer(nextReplacer)
-  }
-
-  const items = pack(displayData, changes, setChanges)
+  const items = pack(displayData, changes, setChanges, handleSpread)
 
   return (
     <Wrapper>
       <StatusBar>
         <div>
-          Status translated: ({translatedCount}/{total}) {percentage}%
-          <TextSearch type="text" placeholder="translate all" onChange={handleFindTextChange} value={replacer.find} />
-          <ApplyBtn onClick={matchAll}>Match All</ApplyBtn>
-          {
-            replacer.matched ? (
-              <>
-              <TextSearch type="text" placeholder="with" onChange={handleReplaceTextChange} value={replacer.replace} />
-              <ApplyBtn onClick={translateAll}>Translated All ({replacer.matched})</ApplyBtn>
-              </>
-            ) : null
-          }
+          Translated: ({translatedCount}/{total}) {percentage}%
+          <StatusText>{statusText}</StatusText>
         </div>
         <FilterWrapper>
           <Checkbox
@@ -274,20 +223,29 @@ const Translate = ({ data }) => {
             checked={filter.onlyUntranslate}
             onChange={handleFilterChange}
           />
-          <label htmlFor="filter-untranslate">Only untranslate</label>
-          <TextSearch type="text" onChange={handleTextFilterChange} />
+          <label htmlFor="filter-untranslate">เฉพาะที่ยังไม่ได้แปล</label>
+          <TextSearch
+            type="text"
+            onChange={handleTextFilterChange}
+            placeholder="กรองคำที่มี..."
+          />
         </FilterWrapper>
-        <SaveBtn onClick={save}>Save</SaveBtn>
+        <SaveBtn onClick={save}>Save({Object.keys(changes).length})</SaveBtn>
       </StatusBar>
-      <List
-        height={viewPortHeight}
-        itemCount={items.db.length}
-        itemData={items}
-        itemSize={140}
-        width={1200}
-      >
-        {Row}
-      </List>
+      <ContentWrapper>
+        <CustomList
+          height={viewPortHeight}
+          itemCount={items.db.length}
+          itemData={items}
+          itemSize={120}
+          width={900}
+        >
+          {Row}
+        </CustomList>
+        <SideContainer>
+          <HistoricalSearch db={translatedWords} />
+        </SideContainer>
+      </ContentWrapper>
     </Wrapper>
   )
 }
@@ -301,7 +259,9 @@ Translate.getInitialProps = async ctx => {
   return {
     data: json.list.map((record, i) => {
       record.$._index = i
-      if (!record._) { record._ = '' }
+      if (!record._) {
+        record._ = ''
+      }
       return record
     })
   }
